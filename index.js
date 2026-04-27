@@ -1,186 +1,204 @@
-let activeStyleHandle = null;
-let manualStyleElement = null;
+// ============ МАКСИМАЛЬНО АГРЕССИВНЫЙ ДЕБАГ ============
+console.log('[Hacker Theme] СКРИПТ ЗАГРУЖЕН', new Date().toISOString());
+console.log('[Hacker Theme] PrismaSDK exists?', typeof PrismaSDK);
+console.log('[Hacker Theme] document readyState?', document.readyState);
+
+let activeStyleElement = null;
+let btnElement = null;
 
 const HACKER_CSS = `
   #Main, #LeftColumn, #MiddleColumn, #RightColumn,
-  .chat-list, .messages-container, .settings-content,
-  .Transition_slide-active {
+  .chat-list, .messages-container,
+  .Transition_slide-active, .LeftColumn,
+  [class*="left"], [class*="Left"] {
     background-color: #0a0a0a !important;
   }
-  .message-content,
-  .chat-item .title,
-  .chat-item .subtitle,
-  .ChatInfo .title,
-  .ChatInfo .status,
-  .MessageMeta,
-  .sender-name,
-  .document-name,
-  .media-caption,
-  .Tab,
-  .ListItem .title {
+  .message-content, .chat-item .title,
+  .ChatInfo .title, .MessageMeta,
+  .Tab, [class*="title"] {
     color: #00ff00 !important;
   }
   .Message {
-    background-color: #111111 !important;
-    border: 1px solid #00ff00 !important;
-    border-radius: 4px !important;
-    box-shadow: 0 0 5px rgba(0, 255, 0, 0.2) !important;
-  }
-  .divider {
-    background-color: rgba(0, 255, 0, 0.2) !important;
-  }
-  ::-webkit-scrollbar-thumb {
-    background-color: #00ff00 !important;
+    background-color: #111 !important;
+    border: 1px solid #0f0 !important;
   }
 `;
 
-// ============ DOM FALLBACK: кнопка напрямую ============
-function injectManualButton() {
+function injectCSS() {
+  if (activeStyleElement) return;
+  activeStyleElement = document.createElement('style');
+  activeStyleElement.id = 'hacker-theme-style';
+  activeStyleElement.textContent = HACKER_CSS;
+  document.head.appendChild(activeStyleElement);
+  console.log('[Hacker Theme] CSS вставлен');
+}
+
+function removeCSS() {
+  if (activeStyleElement) {
+    activeStyleElement.remove();
+    activeStyleElement = null;
+    console.log('[Hacker Theme] CSS удалён');
+  }
+}
+
+function createFloatingButton() {
   if (document.getElementById('hacker-theme-btn')) return;
 
-  // Пробуем найти меню в левой колонке
-  const menuContainer = document.querySelector(
-    '#LeftColumn .Menu, .left-column .Menu, [class*="left"] [class*="Menu"]'
-  );
+  const btn = document.createElement('button');
+  btn.id = 'hacker-theme-btn';
+  btn.textContent = '💀 HACKER THEME';
+  btn.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999999;
+    background: #000;
+    color: #0f0;
+    border: 2px solid #0f0;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 10px #0f0;
+  `;
+  
+  btn.onclick = () => {
+    if (activeStyleElement) {
+      removeCSS();
+      btn.textContent = '💀 HACKER THEME (OFF)';
+      btn.style.color = '#0f0';
+    } else {
+      injectCSS();
+      btn.textContent = '💀 HACKER THEME (ON)';
+      btn.style.color = '#0f0';
+      btn.style.boxShadow = '0 0 20px #0f0, 0 0 40px #0f0';
+    }
+  };
 
-  if (menuContainer) {
-    const item = document.createElement('div');
-    item.id = 'hacker-theme-btn';
-    item.className = 'MenuItem'; // стиль как у пунктов меню Telegram
-    item.style.cssText = 'color: #00ff00 !important; font-weight: bold;';
-    item.innerHTML = `<i class="icon icon-eye"></i><span>Включить Hacker Theme</span>`;
-    
-    item.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      if (activeStyleHandle || manualStyleElement) {
-        await disableTheme();
-        item.querySelector('span').textContent = 'Включить Hacker Theme';
-        item.querySelector('.icon').className = 'icon icon-eye';
-      } else {
-        await enableTheme();
-        item.querySelector('span').textContent = 'Выключить Hacker Theme';
-        item.querySelector('.icon').className = 'icon icon-eye-closed';
+  document.body.appendChild(btn);
+  console.log('[Hacker Theme] Плавающая кнопка вставлена в body');
+  return btn;
+}
+
+function tryFindMenuAndInject() {
+  // Все возможные селекторы меню
+  const selectors = [
+    '#LeftColumn .Menu',
+    '.left-column .Menu',
+    '.LeftColumn .Menu',
+    '[class*="left"] [class*="menu"]',
+    '[class*="Left"] [class*="Menu"]',
+    '.Menu',
+    '#LeftColumn nav',
+    '.left-header',
+    '.LeftColumn-header',
+    '[class*="sidebar"]',
+    '#LeftColumn'
+  ];
+
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el) {
+      console.log('[Hacker Theme] Найден элемент:', sel, el);
+      
+      const item = document.createElement('div');
+      item.id = 'hacker-theme-menu-item';
+      item.style.cssText = 'padding: 8px 16px; color: #0f0; cursor: pointer; font-weight: bold; border-top: 1px solid #333;';
+      item.innerHTML = '💀 Hacker Theme';
+      item.onclick = () => {
+        if (activeStyleElement) {
+          removeCSS();
+          item.innerHTML = '💀 Hacker Theme (OFF)';
+        } else {
+          injectCSS();
+          item.innerHTML = '💀 Hacker Theme (ON)';
+        }
+      };
+      
+      el.appendChild(item);
+      console.log('[Hacker Theme] Пункт меню вставлен в:', sel);
+      return true;
+    }
+  }
+  return false;
+}
+
+// ============ СТРАТЕГИЯ ЗАПУСКА ============
+
+// 1. Пробуем через SDK если есть
+if (typeof PrismaSDK !== 'undefined') {
+  console.log('[Hacker Theme] PrismaSDK найден, пробуем ready...');
+  
+  PrismaSDK.ready(async () => {
+    console.log('[Hacker Theme] PrismaSDK.ready СРАБОТАЛ!');
+    try {
+      const saved = await PrismaSDK.call('storage.get', 'hacker_theme_enabled');
+      console.log('[Hacker Theme] Сохранённое состояние:', saved);
+      if (saved === true || saved === 'true') {
+        injectCSS();
       }
-    });
-
-    menuContainer.appendChild(item);
-    console.log('[Hacker Theme] Кнопка вставлена в меню');
-    return;
-  }
-
-  // Если меню ещё не отрисовалось — вставим в хедер левой колонки
-  const header = document.querySelector('#LeftColumn .left-header, .LeftColumn-header');
-  if (header) {
-    const btn = document.createElement('button');
-    btn.id = 'hacker-theme-btn';
-    btn.textContent = '💀 Hacker';
-    btn.style.cssText = 'background:#111;color:#0f0;border:1px solid #0f0;padding:4px 8px;margin:4px;border-radius:4px;cursor:pointer;font-size:12px;';
-    btn.onclick = async () => {
-      if (activeStyleHandle || manualStyleElement) await disableTheme(); else await enableTheme();
-    };
-    header.appendChild(btn);
-    console.log('[Hacker Theme] Кнопка вставлена в хедер');
-  }
-}
-
-// Ждём появления DOM-элементов
-function waitForMenu() {
-  if (document.querySelector('#LeftColumn')) {
-    injectManualButton();
-  } else {
-    setTimeout(waitForMenu, 500);
-  }
-}
-
-// ============ ЛОГИКА ТЕМЫ ============
-async function enableTheme(saveState = true) {
-  if (activeStyleHandle || manualStyleElement) return;
-
-  try {
-    // Пробуем через SDK
-    const result = await PrismaSDK.call('dom.injectStyle', HACKER_CSS);
-    activeStyleHandle = result?.handleId ?? result;
-    console.log('[Hacker Theme] Через SDK, handle:', activeStyleHandle);
-  } catch (e) {
-    // Fallback: впихиваем <style> самостоятельно
-    console.log('[Hacker Theme] SDK injectStyle не сработал, используем DOM');
-    manualStyleElement = document.createElement('style');
-    manualStyleElement.id = 'hacker-theme-style';
-    manualStyleElement.textContent = HACKER_CSS;
-    document.head.appendChild(manualStyleElement);
-  }
-
-  if (saveState) {
-    try { await PrismaSDK.call('storage.set', 'hacker_theme_enabled', true); } catch(e) {}
-  }
-
-  updateButtonText(true);
-}
-
-async function disableTheme() {
-  if (activeStyleHandle) {
-    try { await PrismaSDK.call('dom.remove', activeStyleHandle); } catch(e) {}
-    activeStyleHandle = null;
-  }
-  if (manualStyleElement) {
-    manualStyleElement.remove();
-    manualStyleElement = null;
-  }
-  try { await PrismaSDK.call('storage.set', 'hacker_theme_enabled', false); } catch(e) {}
-  updateButtonText(false);
-}
-
-function updateButtonText(isEnabled) {
-  const btn = document.getElementById('hacker-theme-btn');
-  if (!btn) return;
-  const icon = btn.querySelector('.icon');
-  const span = btn.querySelector('span');
-  if (isEnabled) {
-    if (span) span.textContent = 'Выключить Hacker Theme';
-    if (icon) icon.className = 'icon icon-eye-closed';
-  } else {
-    if (span) span.textContent = 'Включить Hacker Theme';
-    if (icon) icon.className = 'icon icon-eye';
-  }
-}
-
-// ============ ИНИЦИАЛИЗАЦИЯ ============
-PrismaSDK.ready(async () => {
-  console.log('[Hacker Theme] Старт...');
-
-  try {
-    const saved = await PrismaSDK.call('storage.get', 'hacker_theme_enabled');
-    const isEnabled = saved === true || saved === 'true';
-
-    // Пробуем разные slotId на случай если один из них вдруг окажется правильным
-    const slots = ['sidebar:menu', 'left:menu', 'main:menu', 'settings', 'left_sidebar_menu'];
-    for (const slot of slots) {
-      try {
-        await PrismaSDK.call('ui.registerSlot', slot, {
-          id: 'toggle-hacker-theme',
-          label: isEnabled ? 'Выключить Hacker Theme' : 'Включить Hacker Theme',
-          icon: isEnabled ? 'eye-closed' : 'eye'
-        });
-      } catch(e) {}
+    } catch(e) {
+      console.log('[Hacker Theme] Ошибка storage:', e);
     }
+  });
+} else {
+  console.log('[Hacker Theme] PrismaSDK НЕ найден!');
+}
 
-    // Слушаем клики (если registerSlot вдруг сработал)
-    if (PrismaSDK.onSlotClick) {
-      PrismaSDK.onSlotClick(async (event) => {
-        if (event.contributionId !== 'toggle-hacker-theme') return;
-        if (activeStyleHandle || manualStyleElement) await disableTheme(); else await enableTheme();
-      });
+// 2. Прямое выполнение — не ждём никого
+function init() {
+  console.log('[Hacker Theme] init() вызван');
+  
+  // Пробуем найти меню
+  const menuFound = tryFindMenuAndInject();
+  
+  // Если меню не нашли — вставляем плавающую кнопку
+  if (!menuFound) {
+    createFloatingButton();
+  }
+  
+  // Пробуем восстановить состояние из localStorage напрямую
+  try {
+    const raw = localStorage.getItem('hacker_theme_enabled');
+    console.log('[Hacker Theme] localStorage raw:', raw);
+    if (raw === 'true') {
+      injectCSS();
+      const btn = document.getElementById('hacker-theme-btn');
+      if (btn) btn.textContent = '💀 HACKER THEME (ON)';
     }
+  } catch(e) {}
+}
 
-    // Восстанавливаем тему если была включена
-    if (isEnabled) await enableTheme(false);
+// 3. Ждём появления DOM через MutationObserver
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
-    // В любом случае вставляем кнопку в DOM (fallback)
-    waitForMenu();
-
-  } catch (err) {
-    console.error('[Hacker Theme] Ошибка инициализации:', err);
-    waitForMenu();
+// 4. Также ловим появление элементов динамически
+const observer = new MutationObserver((mutations) => {
+  if (!document.getElementById('hacker-theme-btn') && !document.getElementById('hacker-theme-menu-item')) {
+    // Если интерфейс только что отрисовался — пробуем снова
+    if (document.querySelector('#LeftColumn, .LeftColumn, [class*="left"]')) {
+      console.log('[Hacker Theme] DOM изменился, пробуем inject...');
+      const menuFound = tryFindMenuAndInject();
+      if (!menuFound && !document.getElementById('hacker-theme-btn')) {
+        createFloatingButton();
+      }
+    }
   }
 });
+
+observer.observe(document.body, { childList: true, subtree: true });
+
+// 5. Финальный fallback — через 3 секунды точно будет кнопка
+setTimeout(() => {
+  if (!document.getElementById('hacker-theme-btn') && !document.getElementById('hacker-theme-menu-item')) {
+    console.log('[Hacker Theme] Fallback timeout — вставляем кнопку принудительно');
+    createFloatingButton();
+  }
+}, 3000);
+
+console.log('[Hacker Theme] Скрипт полностью выполнен');
