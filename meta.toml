@@ -1,0 +1,15 @@
+[plugin]
+id = "custom.ui.hacker.theme"
+name = "Hacker Theme"
+version = "1.0.0"
+api_version = "1"
+author = "@twd"
+description = "Кастомизирует UI: добавляет кнопку в боковое меню для переключения зелёной хакерской темы"
+entry = "index.js"
+
+[permissions]
+required = [
+  "ui:slot:sidebar:menu",
+  "ui:dom",
+  "storage:config"
+]
