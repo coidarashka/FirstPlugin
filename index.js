@@ -1,42 +1,47 @@
 const TRIGGER = '.свага';
 const REPLY = 'ГОЙДА';
 
-// ---------------------------------------------------------
-// ЧАСТЬ 1: Если ТЫ пишешь ".свага", плагин отменяет отправку 
-// и отправляет "ГОЙДА" от твоего имени (как в примере разраба)
-// ---------------------------------------------------------
-PrismaSDK.register('beforeMessageSent', async ({ text, chatId }) => {
-  // Проверяем текст (приводим к нижнему регистру и убираем пробелы)
-  if (text.trim().toLowerCase() !== TRIGGER) {
-    return { cancel: false }; // Пропускаем обычные сообщения
-  }
-  
-  // Отправляем ГОЙДА
-  await PrismaSDK.call('messages.send', chatId, REPLY);
-  
-  // Отменяем отправку оригинального ".свага"
-  return { cancel: true };
-});
+// Обязательно оборачиваем всё в ready(), чтобы дождаться связи с ядром!
+PrismaSDK.ready(async () => {
+  console.log('Goyda plugin initialized!');
 
-
-// ---------------------------------------------------------
-// ЧАСТЬ 2: Если КТО-ТО ДРУГОЙ пишет ".свага", плагин 
-// автоматически отвечает "ГОЙДА" в этот же чат
-// ---------------------------------------------------------
-
-// Говорим ядру: "Я хочу получать события о новых сообщениях"
-PrismaSDK.call('events.subscribe', 'message:received').catch(console.error);
-
-// Слушаем входящие сообщения
-PrismaSDK.on('message:received', async (payload) => {
-  const msg = payload.message;
-  
-  // Убеждаемся, что это текстовое сообщение, и оно НЕ наше (!isOutgoing)
-  if (msg && !msg.isOutgoing && msg.text && msg.text.trim().toLowerCase() === TRIGGER) {
-    try {
-      await PrismaSDK.call('messages.send', msg.chatId, REPLY);
-    } catch (err) {
-      console.error('Ошибка при отправке автоответа:', err);
+  // 1. Регистрируем хук для исходящих сообщений
+  PrismaSDK.register('beforeMessageSent', async ({ text, chatId }) => {
+    // Если текст не совпадает, просто разрешаем отправку (cancel: false)
+    if (text.trim().toLowerCase() !== TRIGGER) {
+      return { cancel: false };
     }
+    
+    // Если совпадает — сами отправляем ГОЙДА и отменяем оригинальное сообщение
+    try {
+      await PrismaSDK.call('messages.send', chatId, REPLY);
+    } catch (err) {
+      console.error('Ошибка при отправке из хука:', err);
+    }
+    
+    return { cancel: true };
+  });
+
+  // 2. Подписываемся на чужие (входящие) сообщения
+  try {
+    // Это асинхронный вызов к ядру, поэтому мы делаем его внутри ready()
+    await PrismaSDK.call('events.subscribe', 'message:received');
+    console.log('Успешно подписались на message:received');
+  } catch (err) {
+    console.error('Не удалось подписаться на события:', err);
   }
+
+  // 3. Слушаем входящие сообщения
+  PrismaSDK.on('message:received', async (payload) => {
+    const msg = payload.message;
+    
+    // Проверяем, что сообщение существует, оно НЕ наше, и текст совпадает
+    if (msg && !msg.isOutgoing && msg.text && msg.text.trim().toLowerCase() === TRIGGER) {
+      try {
+        await PrismaSDK.call('messages.send', msg.chatId, REPLY);
+      } catch (err) {
+        console.error('Ошибка при автоматическом ответе:', err);
+      }
+    }
+  });
 });
