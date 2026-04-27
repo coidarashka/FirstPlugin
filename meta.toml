@@ -1,11 +1,10 @@
 [plugin]
-id = "goyda_svaga"
-name = "Goyda Auto-Reply"
+id = "first.swag.plugin"
+name = ".swaga -> ГОЙДА"
 version = "1.0.0"
-api_version = "1"
 sdk_version = "1"
-author = "Antigravity"
-description = "Отправляет ГОЙДА, если отправить или получить .свага"
+author = "@swagnonhewr"
+description = "Отправляет ГОЙДА, если отправить .свага"
 entry = "index.js"
 
 [permissions]
