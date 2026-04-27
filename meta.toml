@@ -1,6 +1,6 @@
 [plugin]
 id = "custom.ui.hacker.theme"
-name = "Hacker Theme"
+name = "Hacker тхеме"
 version = "1.0.0"
 api_version = "1"
 author = "@twd"
